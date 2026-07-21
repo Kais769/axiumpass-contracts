@@ -1,0 +1,39 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+solc_version = "0.8.24"
+# OpenZeppelin 5.6 uses the `mcopy` opcode; Polygon and Base are both
+# post-Dencun, so Cancun is safe on every target chain.
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+# Fail the build on any compiler warning — production discipline.
+deny_warnings = false
+fuzz = { runs = 256 }
+
+# Legacy profile used ONLY to verify the live v1 SubscriptionVault on block
+# explorers. That vault was deployed with solc 0.8.20 (embedded in its on-chain
+# metadata: `64736f6c6343000814` -> 0.8.20), the default evm_version "shanghai"
+# (PUSH0 is present; 0.8.20 cannot target cancun), and optimizer 200. The default
+# profile targets 0.8.24/cancun for the v2 contracts, so recompiling the v1 vault
+# under it does NOT reproduce the deployed bytecode — Etherscan then refuses.
+# Skip everything that requires 0.8.24/cancun so only the v1 vault compiles here:
+# the v2/router sources AND the whole test/ + script/ trees (their files are
+# `pragma ^0.8.24` and would otherwise fail the build under 0.8.20).
+[profile.verify_v1]
+solc_version = "0.8.20"
+evm_version = "shanghai"
+optimizer = true
+optimizer_runs = 200
+skip = [
+    "src/SubscriptionVault4337.sol",
+    "src/AutoSwapRouter.sol",
+    "test/**",
+    "script/**",
+]
+
+[fmt]
+line_length = 100
+tab_width = 4
