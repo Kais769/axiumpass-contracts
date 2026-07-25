@@ -10,7 +10,7 @@ Public mirror of the smart contracts powering [AxiumPass](https://axiumpass.com)
 |---|---|---|
 | [`src/SubscriptionVault.sol`](src/SubscriptionVault.sol) | v1 subscription vault: the subscriber approves an ERC-20 allowance and creates a subscription; each billing period the keeper (or the subscriber themself) calls `processSubscription`, which pulls the payment and forwards **100% of it directly to the merchant** — the vault never holds funds. | **LIVE** on 4 chains |
 | [`src/AutoSwapRouter.sol`](src/AutoSwapRouter.sol) | Stateless "sign once" auto-swap router (1inch v6). Output receiver is enforced on-chain to be the merchant; the router holds no funds. | Deployed (Base, Polygon) |
-| [`src/SubscriptionVault4337.sol`](src/SubscriptionVault4337.sol) | v2 account-abstraction-ready vault (EIP-712 session authorizations, EIP-2612 gasless enrolment, ERC-1271/ERC-6492 smart-account signatures). | Deployed, **not enabled** — gated behind an external audit |
+| [`src/SubscriptionVault4337.sol`](src/SubscriptionVault4337.sol) | v2 account-abstraction-ready vault (EIP-712 session authorizations, EIP-2612 gasless enrolment, ERC-1271/ERC-6492 smart-account signatures, gas-free revocation, at-most-one-charge-per-period scheduling). | **LIVE** on 4 chains (hardened redeploy, enabled 2026-07) |
 
 ## Deployed addresses (SubscriptionVault v1)
 
@@ -27,12 +27,32 @@ The Polygon/Arbitrum/Optimism addresses are identical because the same keeper wa
 
 Constructor argument (all chains): `keeper = 0x152c42b53ca48d0d9c6900C966d742558611F24F`.
 
+### SubscriptionVault4337 (v2 — live, new subscriptions route here)
+
+| Chain | Address |
+|---|---|
+| Polygon (137) | [`0xe9234C7706a7b15A20947fCBd8390c808c523646`](https://polygonscan.com/address/0xe9234C7706a7b15A20947fCBd8390c808c523646#code) |
+| Base (8453) | [`0x6Ed0049DD3F8d6eb24f81fc1ad9978D50cd1D7d8`](https://basescan.org/address/0x6Ed0049DD3F8d6eb24f81fc1ad9978D50cd1D7d8#code) |
+| Arbitrum One (42161) | [`0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953`](https://arbiscan.io/address/0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953#code) |
+| Optimism (10) | [`0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953`](https://optimistic.etherscan.io/address/0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953#code) |
+
+**Security posture, stated honestly:** the v2 vault is covered by the Foundry test
+suite in [`test/`](test/), static analysis (Slither), and an internal hardening
+review — but the **external audit is still the outstanding formal quality bar**.
+We do not describe these contracts as "audited" and won't until an independent
+firm has signed off.
+
 ### AutoSwapRouter
 
 | Chain | Address |
 |---|---|
 | Base | [`0x4dCdC9C2057A1367003C608606F4F05629884Dc3`](https://basescan.org/address/0x4dCdC9C2057A1367003C608606F4F05629884Dc3#code) |
 | Polygon | [`0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953`](https://polygonscan.com/address/0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953#code) |
+
+> Note: the Arbitrum/Optimism v2 vault and the Polygon AutoSwapRouter share the
+> address `0x1dd0…1953` — same deployer wallet, same nonce, different chains
+> (`CREATE` address = f(deployer, nonce)). Each explorer link above shows the
+> verified source of the contract actually deployed on that chain.
 
 ## Non-custodial by construction
 
