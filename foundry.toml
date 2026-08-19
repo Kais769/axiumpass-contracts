@@ -30,11 +30,18 @@ optimizer_runs = 200
 skip = [
     "src/SubscriptionVault4337.sol",
     "src/AutoSwapRouter.sol",
+    "src/FoundersRegistry.sol",
     # Every contract here is pragma ^0.8.24: under this 0.8.20 profile the
     # build fails with "No solc version exists" before compiling anything, so
-    # every NEW src/ contract must be listed. This profile exists for one
-    # purpose only — reproducing the 0.8.20 bytecode of the live v1 vault.
-    "src/FoundersRegistry.sol",
+    # every NEW src/ contract must be listed. Measured on PR #473's first CI
+    # run. This profile exists for one purpose only — reproducing the 0.8.20
+    # bytecode of the live v1 vault.
+    #
+    # Le commentaire nommait auparavant un contrat NON PUBLIÉ. Le miroir
+    # public élague la ligne `src/…` de l'exclu mais pas un commentaire qui le
+    # nomme : la configuration publiée annonçait donc l'existence d'un contrat
+    # que le dépôt public ne contient pas. Un élagage qui ne couvre pas les
+    # commentaires n'élague qu'à moitié.
     "test/**",
     "script/**",
 ]

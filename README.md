@@ -11,6 +11,7 @@ Public mirror of the smart contracts powering [AxiumPass](https://axiumpass.com)
 | [`src/SubscriptionVault.sol`](src/SubscriptionVault.sol) | v1 subscription vault: the subscriber approves an ERC-20 allowance and creates a subscription; each billing period the keeper (or the subscriber themself) calls `processSubscription`, which pulls the payment and forwards **100% of it directly to the merchant** — the vault never holds funds. | **LIVE** on 4 chains |
 | [`src/AutoSwapRouter.sol`](src/AutoSwapRouter.sol) | Stateless "sign once" auto-swap router (1inch v6). Output receiver is enforced on-chain to be the merchant; the router holds no funds. | Deployed (Base, Polygon) |
 | [`src/SubscriptionVault4337.sol`](src/SubscriptionVault4337.sol) | v2 account-abstraction-ready vault (EIP-712 session authorizations, EIP-2612 gasless enrolment, ERC-1271/ERC-6492 smart-account signatures, gas-free revocation, at-most-one-charge-per-period scheduling). | **LIVE** on 4 chains (hardened redeploy, enabled 2026-07) |
+| [`src/FoundersRegistry.sol`](src/FoundersRegistry.sol) | The contract that makes "your name engraved on-chain" literal for the Founders Wall. `owner != registrar` is enforced by the contract itself — one key holding both roles could seal the wall with nobody able to rotate it out — and it has **zero payable functions**, so it can never hold value. | **LIVE** on Base since 2026-07-29 |
 
 ## Deployed addresses (SubscriptionVault v1)
 
