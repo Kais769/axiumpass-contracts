@@ -47,6 +47,28 @@ contract SubscriptionVault4337Invariant is Test {
             "merchant balance must equal total charged"
         );
     }
+
+    /// @dev A charge only ever fires when the subscription is DUE. Randomly
+    ///      interleaved sequences must never find an early-charge path the
+    ///      chosen-example test (Process_TooEarly_Reverts) did not think of.
+    function invariant_ChargesOnlyWhenDue() public view {
+        assertFalse(handler.ghostEarlyCharge(), "a charge fired before nextPaymentTime");
+    }
+
+    /// @dev Every successful charge opens a FULL new window: nextPaymentTime
+    ///      advances by at least one period, whatever the warp pattern. This is
+    ///      the sequence-random form of "at most one charge per wall-clock
+    ///      period" — the scheduling promise the v2 vault is named for.
+    function invariant_EachChargeOpensAFullWindow() public view {
+        assertFalse(handler.ghostWindowShrunk(), "a charge advanced the window by less than one period");
+    }
+
+    /// @dev Cancellation is FINAL: once a subscriber cancels, no sequence of
+    ///      keeper calls and time warps may ever charge them again. This is the
+    ///      customer's gas-free exit, held under adversarial ordering.
+    function invariant_CancellationIsFinal() public view {
+        assertFalse(handler.ghostChargedAfterCancel(), "a cancelled subscription was charged again");
+    }
 }
 
 /// @notice Bounded, multi-subscriber action generator for the invariant fuzzer.
@@ -61,6 +83,15 @@ contract Vault4337Handler is Test {
     uint256[] internal ids;
     mapping(uint256 => address) internal subOf; // id -> its subscriber
     uint256 public totalCharged; // ghost: sum of successful charges to the merchant
+
+    // Ghost flags — the handler OBSERVES violations during the random
+    // sequence; the invariant functions assert they never happened. (A raw
+    // assert inside a handler call would only revert that call and could be
+    // swallowed like any other revert — a flag cannot be un-set.)
+    mapping(uint256 => bool) public ghostCancelled;
+    bool public ghostEarlyCharge; // charged before nextPaymentTime
+    bool public ghostWindowShrunk; // window advanced by less than one period
+    bool public ghostChargedAfterCancel; // cancellation was not final
 
     uint256 internal constant MIN_PERIOD = 1 hours; // mirrors the vault's floor
 
@@ -95,10 +126,23 @@ contract Vault4337Handler is Test {
         if (ids.length == 0) return;
         uint256 id = ids[seed % ids.length];
         vm.warp(block.timestamp + bound(uint256(warpBy), 0, 400 days));
+        (,,,, uint256 period, uint256 nextBefore,,) = vault.subscriptions(id);
         uint256 before = token.balanceOf(merchant);
         vm.prank(keeper);
         try vault.processSubscription(id) {
             totalCharged += token.balanceOf(merchant) - before;
+            (,,,,, uint256 nextAfter,,) = vault.subscriptions(id);
+            if (block.timestamp < nextBefore) ghostEarlyCharge = true;
+            // The documented scheduling promise, as a lower bound: an on-time
+            // charge keeps the anchor (next window opens at scheduled), a LATE
+            // charge opens the next window a FULL period after now — never
+            // sooner. (First ghost draft only required nextAfter >= old+period,
+            // which a "+1 second after a late charge" mutant satisfied — the
+            // red-proof caught it, rule (c) applied to the ghost itself.)
+            uint256 scheduled = nextBefore + period;
+            uint256 floor_ = scheduled > block.timestamp ? scheduled : block.timestamp + period;
+            if (nextAfter < floor_) ghostWindowShrunk = true;
+            if (ghostCancelled[id]) ghostChargedAfterCancel = true;
         } catch {}
     }
 
@@ -106,6 +150,8 @@ contract Vault4337Handler is Test {
         if (ids.length == 0) return;
         uint256 id = ids[seed % ids.length];
         vm.prank(subOf[id]); // only the recorded subscriber may cancel
-        try vault.cancelSubscription(id) {} catch {}
+        try vault.cancelSubscription(id) {
+            ghostCancelled[id] = true;
+        } catch {}
     }
 }
