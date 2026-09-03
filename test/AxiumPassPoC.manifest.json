@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+  "corpus": "axiumpass-poc-benchmark",
+  "purpose": "Severity-tagged corpus of adversarial PoCs that the SubscriptionVault v1 (LIVE) DEFENDS. Each entry maps a top attack scenario to the invariant it would break, the Immunefi v2.3 severity IF it succeeded, and the executable test that proves it is blocked. Ingested by the assurance Benchmark Engine (SROS.md) so detection quality is measured over a fixed, growing set — not re-argued each run.",
+  "target": {
+    "contract": "SubscriptionVault (v1)",
+    "status": "LIVE / immutable",
+    "source": "contracts/src/SubscriptionVault.sol",
+    "test_file": "contracts/test/AxiumPassPoC.t.sol",
+    "run": "cd contracts && forge test --match-contract AxiumPassPoCHarness -vvv"
+  },
+  "convention": "test PASSING == invariant HOLDS (the exploit is blocked). A test FAILING is a real regression / candidate finding.",
+  "scenarios": [
+    {
+      "id": "PoC-01",
+      "test": "test_PoC01_KeeperCannotRedirectCharge",
+      "attack": "Compromised keeper key attempts to redirect a charge to an attacker address.",
+      "severity_if_successful": "Critical",
+      "invariant": "INV-KEEPER-NOREDIR, INV-RECIPIENT",
+      "ledger_ref": "KEY-0001",
+      "expected": "funds go only to the enrolled merchant; attacker gains nothing"
+    },
+    {
+      "id": "PoC-02",
+      "test": "test_PoC02_KeeperCannotInflateAmount",
+      "attack": "Compromised keeper attempts to charge more than the enrolled amount, abusing a max-uint approval.",
+      "severity_if_successful": "Critical",
+      "invariant": "INV-AMOUNT",
+      "ledger_ref": "KEY-0001",
+      "expected": "exactly one period's amount leaves the subscriber, never the full approval"
+    },
+    {
+      "id": "PoC-03",
+      "test": "test_PoC03_NoDoubleChargeWithinPeriod",
+      "attack": "Keeper double-charges within one period / abuses catch-up to bill many periods at once.",
+      "severity_if_successful": "High",
+      "invariant": "INV-PERIOD (F2 single-advance)",
+      "ledger_ref": "F2",
+      "expected": "second in-period call reverts 'too early'; a single call after a long gap advances exactly one period"
+    },
+    {
+      "id": "PoC-04",
+      "test": "test_PoC04_VaultNeverHoldsCustody",
+      "attack": "Drain pooled custody held by the vault.",
+      "severity_if_successful": "Critical",
+      "invariant": "INV-CUSTODY (non-custodial, HARD GUARD 3)",
+      "ledger_ref": "INV-CUSTODY",
+      "expected": "vault token balance is always zero — no honeypot, no withdraw/sweep selector"
+    },
+    {
+      "id": "PoC-05",
+      "test": "test_PoC05_CannotBillNonConsentingVictim",
+      "attack": "Bill a non-consenting victim who once approved the vault, via a forged `from`.",
+      "severity_if_successful": "Critical",
+      "invariant": "INV-CUSTODY / consent (subscriber = enrolment msg.sender, not caller-supplied)",
+      "ledger_ref": "INV-TENANT",
+      "expected": "attacker can only ever bill themselves; the victim is never charged"
+    },
+    {
+      "id": "PoC-06",
+      "test": "test_PoC06_NoChargeAfterCancel",
+      "attack": "Charge a subscription the subscriber already cancelled.",
+      "severity_if_successful": "High",
+      "invariant": "subscriber sovereignty, SM-1 CANCELLED terminal",
+      "ledger_ref": "SM-1",
+      "expected": "processSubscription reverts 'inactive' after cancel"
+    },
+    {
+      "id": "PoC-07",
+      "test": "test_PoC07_CannotBackdateFirstCharge",
+      "attack": "Back-date startTime to force an immediate extra first charge (on-chain analog of the C1 High backend fix).",
+      "severity_if_successful": "High",
+      "invariant": "INV-FIRSTCHARGE",
+      "ledger_ref": "C1",
+      "expected": "createSubscription reverts 'startTime in the past'"
+    },
+    {
+      "id": "PoC-08",
+      "test": "test_PoC08_OutsiderCannotTriggerBilling",
+      "attack": "Unauthorized third party forces billing on someone else's schedule (griefing).",
+      "severity_if_successful": "Medium",
+      "invariant": "TB-KEEPER authorization boundary",
+      "ledger_ref": "TB-KEEPER",
+      "expected": "processSubscription reverts 'not authorized' for a non-keeper, non-subscriber caller"
+    }
+  ]
+}
