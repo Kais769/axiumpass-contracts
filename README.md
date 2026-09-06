@@ -12,6 +12,7 @@ Public mirror of the smart contracts powering [AxiumPass](https://axiumpass.com)
 | [`src/AutoSwapRouter.sol`](src/AutoSwapRouter.sol) | Stateless "sign once" auto-swap router (1inch v6). Output receiver is enforced on-chain to be the merchant; the router holds no funds. | Deployed (Base, Polygon) |
 | [`src/SubscriptionVault4337.sol`](src/SubscriptionVault4337.sol) | v2 account-abstraction-ready vault (EIP-712 session authorizations, EIP-2612 gasless enrolment, ERC-1271/ERC-6492 smart-account signatures, gas-free revocation, at-most-one-charge-per-period scheduling). | **LIVE** on 4 chains (hardened redeploy, enabled 2026-07) |
 | [`src/FoundersRegistry.sol`](src/FoundersRegistry.sol) | The contract that makes "your name engraved on-chain" literal for the Founders Wall. `owner != registrar` is enforced by the contract itself — one key holding both roles could seal the wall with nobody able to rotate it out — and it has **zero payable functions**, so it can never hold value. | **LIVE** on Base since 2026-07-29 — [`0x411B6B3CbC94CCd9fCe135d11aE2a5BaF14f42F9`](https://basescan.org/address/0x411B6B3CbC94CCd9fCe135d11aE2a5BaF14f42F9) |
+| [`src/MerchantRegistry.sol`](src/MerchantRegistry.sol) | The on-chain record of **who** counts as an AxiumPass merchant, so published volume is attributable rather than farmable: the adapter counts a charge only when its recipient was a registered merchant *at that moment*. Zero payable functions. | **Not deployed** — written, tested, awaiting the arbitration that puts it on chain |
 
 ## Deployed addresses (SubscriptionVault v1)
 
@@ -54,6 +55,30 @@ a rollout in progress, and it is stated here rather than left to be discovered.
 | Base (8453) | [`0x6Ed0049DD3F8d6eb24f81fc1ad9978D50cd1D7d8`](https://basescan.org/address/0x6Ed0049DD3F8d6eb24f81fc1ad9978D50cd1D7d8#code) |
 | Arbitrum One (42161) | [`0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953`](https://arbiscan.io/address/0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953#code) |
 | Optimism (10) | [`0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953`](https://optimistic.etherscan.io/address/0x1dd00Dfb68773d2043e24A0Ebb6EAdC2e6Ab1953#code) |
+
+## The test perimeter, counted rather than adjectivised
+
+`forge test` runs **164 cases** across twelve suites. They are not all the same
+kind of evidence, and an auditor should not have to guess which is which:
+
+| Suite | Cases | What kind of evidence it is |
+|---|---:|---|
+| `SubscriptionVault4337.t.sol` | 21 | Unit — the v2 vault's intended behaviour |
+| `SubscriptionVault4337Hardening.t.sol` | 18 | Unit — each hardening decision, one test per decision |
+| `SubscriptionVault4337NonceOrdering.t.sol` | 7 | Unit — replay and ordering of EIP-712 authorizations |
+| `SubscriptionVault4337Invariant.t.sol` | 5 | **Invariant** — properties held under Foundry fuzzing |
+| `SubscriptionVault4337Symbolic.t.sol` | 3 | **Symbolic** (halmos) — `unknown` is treated as a FAILURE, not a pass |
+| `SubscriptionVaultArithmetic.t.sol` | 4 | Arithmetic edges on the money path |
+| `SubscriptionVault.t.sol` + `…Invariant.t.sol` | 9 | The v1 vault (LIVE on 6 chains) |
+| `AxiumPassPoC.t.sol` | 8 | **Adversarial PoC** — each test takes the attacker's side, executes the exploit attempt, and asserts the vault defends it. Severity-tagged in [`test/AxiumPassPoC.manifest.json`](test/AxiumPassPoC.manifest.json) |
+| `AutoSwapRouter.t.sol` | 27 | Unit — the swap router |
+| `FoundersRegistry.t.sol` | 39 | Unit — the founders registry |
+| `MerchantRegistry.t.sol` | 23 | Unit — the not-yet-deployed merchant registry |
+
+Sizes, measured (non-comment, non-blank lines) rather than estimated:
+`SubscriptionVault4337` **263**, `AutoSwapRouter` **198**, `FoundersRegistry` **166**,
+`MerchantRegistry` **151**, `SubscriptionVault` **148** — **926 nSLOC** in total,
+of which **775** are deployed today.
 
 **Security posture, stated honestly:** the v2 vault is covered by the Foundry test
 suite in [`test/`](test/), static analysis (Slither), and an internal hardening
