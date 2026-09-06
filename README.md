@@ -124,6 +124,33 @@ The live v1 vault was compiled with solc `0.8.20`, EVM `shanghai`, optimizer `20
 FOUNDRY_PROFILE=verify_v1 forge build
 ```
 
+## Security & audit dossiers
+
+The nine documents under [`audit/`](audit/) are byte-identical copies of `contracts/audit/` in the private
+tree (published 2026-09-05). They are what a security firm reads before pricing an engagement, so they sit
+next to the code they describe rather than behind a request.
+
+| Document | What it is |
+|---|---|
+| [`AUDIT_ENGAGEMENT_PACKAGE.md`](audit/AUDIT_ENGAGEMENT_PACKAGE.md) | Scope, invariants, deliverables and gate for an external review of `SubscriptionVault4337` |
+| [`INTERNAL_AUDIT_2026-07.md`](audit/INTERNAL_AUDIT_2026-07.md) | The internal adversarial review, findings F1–F35 with severity, `file:line` and status |
+| [`THREAT_MODEL_STRIDE.md`](audit/THREAT_MODEL_STRIDE.md) | STRIDE threat model across contracts, keeper, backend and frontend |
+| [`VULN_CLASSES.md`](audit/VULN_CLASSES.md) | Vulnerability classes checked, and how each maps onto this codebase |
+| [`AUDIT_METHODOLOGY.md`](audit/AUDIT_METHODOLOGY.md) | The review method (planning → fieldwork → reporting) and its intake log |
+| [`SECURITY_HARDENING.md`](audit/SECURITY_HARDENING.md) | Operational hardening runbook that accompanies the audit |
+| [`DEPLOY_RUNBOOK_V2.md`](audit/DEPLOY_RUNBOOK_V2.md) | How v2 was (re)deployed, with the pre-deploy fixes it required |
+| [`VERIFY_RUNBOOK.md`](audit/VERIFY_RUNBOOK.md) | Source-verification procedure on the block explorers |
+| [`SECURITY_FUNDING_STRATEGY.md`](audit/SECURITY_FUNDING_STRATEGY.md) | How the external audit is meant to be funded (grants first) |
+
+Two things these documents say about themselves, repeated here so nobody reads more into them:
+
+* The internal audit is **not** an external audit. The formal external review of `SubscriptionVault4337`
+  remains the outstanding quality bar; none of the contracts here should be described as "audited".
+* Finding **F31** in the internal audit (an unauthenticated relay that injected a paid API key on the
+  backend side) was **fixed and verified in production on 2026-09-05**: the relay now requires the
+  merchant's JWT and answers 401 to anonymous calls. The dossier keeps the finding as written, because
+  a finding that disappears from the record is worse than one marked fixed.
+
 ## About this repository
 
 This is a read-only mirror published for transparency and verification. Development happens in the main (private) AxiumPass repository; this mirror is updated when the contracts or their tests change. Issues and pull requests here are not monitored.
